@@ -2,3 +2,5 @@ trying to implement strategy test black jack to see if basic strategy is the bes
 
 Command line to play the simulation :
 python blackjack_simulatorV5.py card_count_values.csv betting_system.csv strategy_Ace.csv strategy_Pair.csv strategy_Hard.csv
+
+With V5 version. Following basic strategy, winrate player is between 38 and 42%
