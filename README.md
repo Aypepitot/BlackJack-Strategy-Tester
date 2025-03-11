@@ -16,5 +16,5 @@ Dealer 51%
 Pushes : 7%
 Nb game : 5300
 Player final money : -2755
-Slighy better but now I can make more varaition of basic strategy
+Slightly better but now I can make more varaition of basic strategy
 I know it don't equal to 100% but who cares...
