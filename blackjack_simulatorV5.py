@@ -128,13 +128,19 @@ class StrategyManager:
                     pair_value = '10'
                 return self.pair_strategy.loc[pair_value, dealer_value]
             elif 'A' in [card.value for card in player_hand]:
-                ace_value = 'A' + (player_hand[1].value if player_hand[0].value == 'A' else player_hand[0].value)
-                if ace_value in self.ace_strategy.index:
-                    return self.ace_strategy.loc[ace_value, dealer_value]
-                else:
-                    print(f"Debug: Key {ace_value} not found in ace_strategy")
-                    player_total = self._hard_value(player_hand)
-                    return self.hard_strategy.loc[player_total, dealer_value]
+                # Trouver la valeur des cartes autres que l'As
+                other_cards = [card for card in player_hand if card.value != 'A']
+                other_sum = sum(10 if card.value in ['J', 'Q', 'K'] else int(card.value) for card in other_cards)
+                if other_sum <= 10:
+                    ace_value = 'A' + str(other_sum)
+                    if ace_value in self.ace_strategy.index:
+                        return self.ace_strategy.loc[ace_value, dealer_value]
+                    else:
+                        print(f"Debug: Key {ace_value} not found in ace_strategy")
+
+                    # Si la somme dépasse 10 ou si la clé n'est pas trouvée, on traite comme une main dure
+                player_total = self._hard_value(player_hand)
+                return self.hard_strategy.loc[player_total, dealer_value]
             else:
                 player_total = self._hard_value(player_hand)
                 return self.hard_strategy.loc[player_total, dealer_value]
