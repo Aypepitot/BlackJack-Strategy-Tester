@@ -220,11 +220,16 @@ class BlackjackSimulator:
                                                       self.dealer.hands[0][0])  # Access the dealer's upcard correctly
             if isinstance(action, pd.Series):
                 action = action.values[0]
-            if action == 'Sr' and not surrender_allowed:
+
+            if action == 'SrH' and not surrender_allowed:
+                action = 'H'
+            if action == 'SrS' and not surrender_allowed:
                 action = 'S'
             if action == 'D' and not double_allowed:
                 action = 'H'
+
             actions.append(action)
+
             if action == 'H':
                 self.player.receive_card(self.deck.draw_card(), hand_index)
                 surrender_allowed = False
@@ -244,10 +249,11 @@ class BlackjackSimulator:
                     split_actions = self.player_turn(new_hand_index, player_actions)
                     player_actions[new_hand_index].extend(split_actions)
                 return actions
-            elif action == 'Sr':
-                self.player.money += self.player.bets[hand_index] // 2
-                self.player.bets[hand_index] = 0
-                break
+            elif action in ['SrH', 'SrS']:
+                if surrender_allowed:
+                    self.player.money += self.player.bets[hand_index] // 2
+                    self.player.bets[hand_index] = 0
+                    break
 
             if self.player.hand_value(hand_index) > 21:
                 break
@@ -324,5 +330,5 @@ if __name__ == "__main__":
     strategy_hard_file = sys.argv[5]
 
     simulator = BlackjackSimulator(card_count_values_file, betting_system_file, strategy_ace_file, strategy_pair_file,
-                                   strategy_hard_file, num_games=1000)
+                                   strategy_hard_file, num_games=5000)
     simulator.simulate()
