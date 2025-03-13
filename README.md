@@ -5,7 +5,6 @@ python blackjack_simulatorV6.py card_count_values.csv betting_system.csv strateg
 
 Basic strategy ENHC stats : (from 3 simulations of 50000 games)
 
-Simulation finished. Total games: 51430
 Player wins: 21612 (42.02%)
 Dealer wins: 20611 (40.08%)
 Surrenders: 5180 (10.07%)
