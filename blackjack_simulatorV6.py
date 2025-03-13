@@ -259,6 +259,7 @@ class BlackjackSimulator:
                 if surrender_allowed:
                     self.player.money += self.player.bets[hand_index] // 2
                     self.player.bets[hand_index] = 0
+                    return actions
                     break
 
             if self.player.hand_value(hand_index) > 21:
@@ -274,6 +275,9 @@ class BlackjackSimulator:
         return actions
 
     def determine_winner(self, hand_index):
+
+        if self.player.bets[hand_index] == 0:
+            return 'Surrender'
         player_value = self.player.hand_value(hand_index)
         dealer_value = self.dealer.hand_value()
 
@@ -310,14 +314,16 @@ class BlackjackSimulator:
     def display_stats(self):
         wins = len([result for result in self.results if result['Result'] == 'Player'])
         losses = len([result for result in self.results if result['Result'] == 'Dealer'])
+        surrenders = len([result for result in self.results if result['Result'] == 'Surrender'])
         pushes = len([result for result in self.results if result['Result'] == 'Push'])
-        total_games = len(self.results)
+        total_games = len(self.results) - len([result for result in self.results if result['Result'] == 'Split'])
         highest_money = max(result['Player Money'] for result in self.results)
         lowest_money = min(result['Player Money'] for result in self.results)
 
         print(f"Simulation finished. Total games: {total_games}")
         print(f"Player wins: {wins} ({wins / total_games * 100:.2f}%)")
         print(f"Dealer wins: {losses} ({losses / total_games * 100:.2f}%)")
+        print(f"Surrenders: {surrenders} ({surrenders / total_games * 100:.2f}%)")
         print(f"Pushes: {pushes} ({pushes / total_games * 100:.2f}%)")
         print(f"Player's final money: {self.player.money}")
         print(f"Highest money: {highest_money}")
@@ -336,5 +342,5 @@ if __name__ == "__main__":
     strategy_hard_file = sys.argv[5]
 
     simulator = BlackjackSimulator(card_count_values_file, betting_system_file, strategy_ace_file, strategy_pair_file,
-                                   strategy_hard_file, num_games=5000)
+                                   strategy_hard_file, num_games=50000)
     simulator.simulate()
