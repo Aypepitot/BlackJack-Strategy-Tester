@@ -1,30 +1,31 @@
 trying to implement strategy test black jack to see if basic strategy is the best strategy
 
 Command line to play the simulation :
-python blackjack_simulatorV5.py card_count_values.csv betting_system.csv strategy_Ace.csv strategy_Pair.csv strategy_Hard.csv
+python blackjack_simulatorV6.py card_count_values.csv betting_system.csv strategy_Ace.csv strategy_Pair.csv strategy_Hard.csv
 
-With V5 version. Following basic strategy,with 5000 games my average stat is :
-Player : 39%
-Dealer 52%
-Pushes : 6%
-I know it don't equal to 100% but who cares...
+Basic strategy ENHC stats : (from 3 simulations of 50000 games)
 
-With V6 and implementation of SrS (Surrender if possible if not Stand) and SrH (same but hit), correction of Ace hands and 50000 games. I also add Nb game (from one simulation) and final money to see impact of double / bettings system for the futur  
-My average stats :
-Simulation finished. Total games: 52944
-Player wins: 22350 (42.21%)
-Dealer wins: 24978 (47.18%)
-Pushes: 4144 (7.83%)
-Player's final money: 3170.0
-Highest money: 3985.0
-Lowest money: 735.0
-Slightly better but now I can make more variation of basic strategy
+Simulation finished. Total games: 51430
+Player wins: 21612 (42.02%)
+Dealer wins: 20611 (40.08%)
+Surrenders: 5180 (10.07%)
+Pushes: 4027 (7.83%)
+Player's final money: 4120.0
+Highest money: 4895.0
+Lowest money: 590.0
 
-Variante 1 Instead of double in Ace strategy just hit :
-Simulation finished. Total games: 52964
-Player wins: 22359 (42.22%)
-Dealer wins: 24870 (46.96%)
-Pushes: 4253 (8.03%)
-Player's final money: 1400.0
-Highest money: 4250.0
-Lowest money: 640.0
+Player wins: 21425 (41.56%)
+Dealer wins: 20751 (40.25%)
+Surrenders: 5140 (9.97%)
+Pushes: 4235 (8.22%)
+Player's final money: 1005.0
+Highest money: 1640.0
+Lowest money: -1875.0
+
+Player wins: 21467 (41.67%)
+Dealer wins: 20642 (40.07%)
+Surrenders: 5261 (10.21%)
+Pushes: 4147 (8.05%)
+Player's final money: 1975.0
+Highest money: 3555.0
+Lowest money: -210.0
