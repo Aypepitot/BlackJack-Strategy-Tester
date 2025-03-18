@@ -24,8 +24,11 @@ class Deck:
         deck = [Card(value, suit) for value in values for suit in suits] * self.num_decks
         return deck
 
-    def draw_card(self):
-        return self.cards.pop()
+    def draw_card(self, card_counter):
+        card = self.cards.pop()
+        num_decks_remaining = len(self.cards) / 52
+        card_counter.update_counts(card, num_decks_remaining)
+        return card
 
 
 class CardCounter:
@@ -44,7 +47,7 @@ class CardCounter:
 
 
 class Player:
-    def __init__(self, initial_money=1000):
+    def __init__(self, initial_money=100):
         self.money = initial_money
         self.hands = [[]]
         self.bets = [0]
@@ -167,7 +170,7 @@ class BettingSystem:
 
 class BlackjackSimulator:
     def __init__(self, count_values_file, betting_file, ace_strategy_file, pair_strategy_file, hard_strategy_file,
-                 num_decks=6, penetration=0.6, base_bet=10, initial_money=1000, num_games=100):
+                 num_decks=6, penetration=0.6, base_bet=10, initial_money=100, num_games=100):
         self.num_decks = num_decks
         self.penetration = penetration
         self.base_bet = base_bet
@@ -193,10 +196,15 @@ class BlackjackSimulator:
         self.dealer.reset_hands()
         self.player.place_bet(self.betting_system.get_bet(self.card_counter.true_count))
 
-        self.player.receive_card(self.deck.draw_card())
-        self.dealer.receive_card(self.deck.draw_card())
-        self.player.receive_card(self.deck.draw_card())
-        self.dealer.receive_card(self.deck.draw_card())
+        self.player.receive_card(self.deck.draw_card(self.card_counter))
+        self.dealer.receive_card(self.deck.draw_card(self.card_counter))
+        self.player.receive_card(self.deck.draw_card(self.card_counter))
+        self.dealer.receive_card(self.deck.draw_card(self.card_counter))
+
+        if len(self.deck.cards) < self.num_decks * 52 * (1 - self.penetration):
+            print(f"🔄 Remélange du deck (Pénétration : {self.penetration * 100:.0f}%)")
+            self.deck = Deck(self.num_decks)  # Nouveau deck mélangé
+            self.card_counter.running_count = 0  # Réinitialiser le running count
 
         if self.player.has_blackjack():
             self.player.money += self.player.bets[0] * 2.5
@@ -237,21 +245,21 @@ class BlackjackSimulator:
             actions.append(action)
 
             if action == 'H':
-                self.player.receive_card(self.deck.draw_card(), hand_index)
+                self.player.receive_card(self.deck.draw_card(self.card_counter), hand_index)
                 surrender_allowed = False
                 double_allowed = False
             elif action == 'S':
                 break
             elif action == 'D':
                 self.player.double_bet(hand_index)
-                self.player.receive_card(self.deck.draw_card(), hand_index)
+                self.player.receive_card(self.deck.draw_card(self.card_counter), hand_index)
                 break
             elif action == 'P':
                 self.log_result('Split', actions, [], hand_index)
                 self.player.split_hand(hand_index)
                 player_actions.append([])  # Ensure player_actions list is updated for the new hand
                 for new_hand_index in [hand_index, len(self.player.hands) - 1]:
-                    self.player.receive_card(self.deck.draw_card(), new_hand_index)
+                    self.player.receive_card(self.deck.draw_card(self.card_counter), new_hand_index)
                     split_actions = self.player_turn(new_hand_index, player_actions)
                     player_actions[new_hand_index].extend(split_actions)
                 return actions
@@ -270,7 +278,7 @@ class BlackjackSimulator:
         actions = []
         while self.dealer.should_hit():
             actions.append('H')
-            self.dealer.receive_card(self.deck.draw_card())
+            self.dealer.receive_card(self.deck.draw_card(self.card_counter))
         actions.append('S')
         return actions
 
@@ -296,6 +304,9 @@ class BlackjackSimulator:
             self.player.money += self.player.bets[hand_index]
 
     def log_result(self, result, player_actions, dealer_actions, hand_index):
+        remaining_cards = len(self.deck.cards)
+        total_cards = self.num_decks * 52
+        percentage_remaining = (remaining_cards / total_cards) * 100
         log = {
             'Bet': self.player.bets[hand_index],
             'Player Hand': self.player.display_hand(hand_index),
@@ -305,7 +316,9 @@ class BlackjackSimulator:
             'Result': result,
             'Player Money': self.player.money,
             'Running Count': self.card_counter.running_count,
-            'True Count': self.card_counter.true_count,
+            'True Count': f"{self.card_counter.true_count:.2f}",
+            'Remaining Cards': remaining_cards,
+            'Percentage Remaining': f"{percentage_remaining:.2f}%",
             'Player Actions': player_actions
         }
         self.results.append(log)
@@ -319,6 +332,9 @@ class BlackjackSimulator:
         total_games = len(self.results) - len([result for result in self.results if result['Result'] == 'Split'])
         highest_money = max(result['Player Money'] for result in self.results)
         lowest_money = min(result['Player Money'] for result in self.results)
+        total_cards = self.num_decks * 52
+        remaining_cards = len(self.deck.cards)
+        percentage_remaining = (remaining_cards / total_cards) * 100
 
         print(f"Simulation finished. Total games: {total_games}")
         print(f"Player wins: {wins} ({wins / total_games * 100:.2f}%)")
@@ -328,6 +344,7 @@ class BlackjackSimulator:
         print(f"Player's final money: {self.player.money}")
         print(f"Highest money: {highest_money}")
         print(f"Lowest money: {lowest_money}")
+        print(f"Remaining cards: {remaining_cards} ({percentage_remaining:.2f}%)")
 
 
 if __name__ == "__main__":
@@ -342,5 +359,156 @@ if __name__ == "__main__":
     strategy_hard_file = sys.argv[5]
 
     simulator = BlackjackSimulator(card_count_values_file, betting_system_file, strategy_ace_file, strategy_pair_file,
-                                   strategy_hard_file, num_games=50000)
+                                   strategy_hard_file, num_games=10)
     simulator.simulate()
+
+import threading
+import tkinter as tk
+import seaborn as sns
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+class BlackjackGUI:
+    def __init__(self, root, simulator):
+        self.root = root
+        self.simulator = simulator
+        self.root.title("Blackjack Simulator")
+        self.root.state('zoomed')  # Plein écran
+
+        # Champ pour saisir le nombre de parties
+        self.num_games_label = tk.Label(root, text="Nombre de parties:")
+        self.num_games_label.pack()
+        self.num_games_entry = tk.Entry(root)
+        self.num_games_entry.insert(0, "200")  # Valeur par défaut
+        self.num_games_entry.pack()
+
+        # Champ pour saisir la somme de départ
+        self.initial_money_label = tk.Label(root, text="Somme de départ (€):")
+        self.initial_money_label.pack()
+        self.initial_money_entry = tk.Entry(root)
+        self.initial_money_entry.insert(0, "100")  # Valeur par défaut
+        self.initial_money_entry.pack()
+
+        # Bouton pour démarrer la simulation
+        self.start_button = tk.Button(root, text="Lancer la Simulation", command=self.run_simulation)
+        self.start_button.pack(pady=10)
+
+        # Création des graphiques
+        self.figure = Figure(figsize=(12, 6), dpi=100)
+
+        # Graphique pour l'évolution de l'argent
+        self.ax_money = self.figure.add_subplot(211)
+        self.ax_money.set_title("Évolution de l'Argent")
+        self.ax_money.set_xlabel("Nombre de parties")
+        self.ax_money.set_ylabel("Argent (€)")
+
+        # Axe secondaire pour une autre métrique
+        self.ax_secondary = self.ax_money.twinx()
+        self.ax_secondary.set_ylabel("True Count")
+
+        # Graphique pour les pourcentages de résultats
+        self.ax_percentages = self.figure.add_subplot(212)
+        self.ax_percentages.set_title("Pourcentages de Résultats")
+        self.ax_percentages.set_xlabel("Nombre de parties")
+        self.ax_percentages.set_ylabel("Pourcentage (%)")
+
+        # Intégration des graphes à l'interface Tkinter
+        self.canvas = FigureCanvasTkAgg(self.figure, master=root)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+    def run_simulation(self):
+        """ Lance la simulation dans un thread séparé pour ne pas bloquer l'interface graphique """
+        # Mettre à jour les paramètres de la simulation avec les valeurs saisies par l'utilisateur
+        self.simulator.num_games = int(self.num_games_entry.get())
+        self.simulator.player.money = int(self.initial_money_entry.get())
+
+        # Réinitialiser les graphiques
+        self.ax_money.clear()
+        self.ax_money.set_title("Évolution de l'Argent", fontsize=14)
+        self.ax_money.set_xlabel("Nombre de parties", fontsize=12)
+        self.ax_money.set_ylabel("Argent (€)", fontsize=12)
+        self.ax_money.grid(True, linestyle='--', alpha=0.6)
+
+        self.ax_secondary.clear()
+        self.ax_secondary.set_ylabel("True Count")
+
+        self.ax_percentages.clear()
+        self.ax_percentages.set_title("Pourcentages de Résultats", fontsize=14)
+        self.ax_percentages.set_xlabel("Nombre de parties", fontsize=12)
+        self.ax_percentages.set_ylabel("Pourcentage (%)", fontsize=12)
+        self.ax_percentages.grid(True, linestyle='--', alpha=0.6)
+
+        self.canvas.draw()
+
+        # Lancer la simulation dans un thread séparé
+        simulation_thread = threading.Thread(target=self.run_simulation_thread, daemon=True)
+        simulation_thread.start()
+
+    def run_simulation_thread(self):
+        """ Fonction exécutée en arrière-plan pour mettre à jour la simulation en temps réel """
+        self.simulator.results = []  # Réinitialiser les résultats
+        money_history = []
+        true_count_history = []
+        results_count = {'Player': 0, 'Dealer': 0, 'Surrender': 0, 'Push': 0}
+        percentages_history = {'Player': [], 'Dealer': [], 'Surrender': [], 'Push': []}
+
+        update_interval = max(1, self.simulator.num_games // 10)  # Mettre à jour moins fréquemment pour plus de fluidité
+
+        for i in range(self.simulator.num_games):
+            self.simulator.play_game()  # Joue une partie
+            money_history.append(self.simulator.player.money)  # Enregistre l'évolution de l'argent
+            true_count_history.append(self.simulator.card_counter.true_count)  # Enregistre l'évolution du true count
+
+            # Mettre à jour les comptes de résultats
+            result = self.simulator.results[-1]['Result']
+            if result in results_count:
+                results_count[result] += 1
+
+            # Calculer les pourcentages
+            total_games_played = i + 1
+            for key in results_count:
+                percentages_history[key].append((results_count[key] / total_games_played) * 100)
+
+            # Mise à jour des graphiques à un intervalle défini
+            if i % update_interval == 0 or i == self.simulator.num_games - 1:
+                self.update_graphs(money_history, true_count_history, percentages_history)
+
+    def update_graphs(self, money_history, true_count_history, percentages_history):
+        """ Met à jour les graphiques en appelant Tkinter depuis le thread principal """
+        # Mettre à jour le graphique de l'argent
+        self.ax_money.clear()
+        sns.lineplot(x=range(1, len(money_history) + 1), y=money_history, ax=self.ax_money, color='blue', label='Argent')
+        self.ax_money.set_title("Évolution de l'Argent", fontsize=14)
+        self.ax_money.set_xlabel("Nombre de parties", fontsize=12)
+        self.ax_money.set_ylabel("Argent (€)", fontsize=12)
+        self.ax_money.grid(True, linestyle='--', alpha=0.6)
+
+        # Mettre à jour l'axe secondaire avec le true count
+        self.ax_secondary.clear()
+        sns.lineplot(x=range(1, len(true_count_history) + 1), y=true_count_history, ax=self.ax_secondary, color='orange', label='True Count')
+        self.ax_secondary.set_ylabel("True Count")
+
+        # Mettre à jour le graphique des pourcentages
+        self.ax_percentages.clear()
+        for key, color in zip(percentages_history.keys(), ['green', 'red', 'purple', 'orange']):
+            sns.lineplot(x=range(1, len(percentages_history[key]) + 1), y=percentages_history[key], ax=self.ax_percentages, label=key, color=color)
+        self.ax_percentages.set_title("Pourcentages de Résultats", fontsize=14)
+        self.ax_percentages.set_xlabel("Nombre de parties", fontsize=12)
+        self.ax_percentages.set_ylabel("Pourcentage (%)", fontsize=12)
+        self.ax_percentages.legend()
+        self.ax_percentages.grid(True, linestyle='--', alpha=0.6)
+
+        self.canvas.draw()
+        self.root.after(1, self.canvas.draw)  # Forcer le rafraîchissement graphique avec Tkinter
+
+# Lancement de l'interface graphique
+if __name__ == "__main__":
+    root = tk.Tk()
+    simulator = BlackjackSimulator(
+        "card_count_values.csv", "betting_system.csv", "strategy_Ace.csv",
+        "strategy_Pair.csv", "strategy_Hard.csv", num_decks=6, penetration=0.75,
+        num_games=200  # Valeur par défaut, sera remplacée par l'entrée utilisateur
+    )
+    app = BlackjackGUI(root, simulator)
+    root.mainloop()
+
